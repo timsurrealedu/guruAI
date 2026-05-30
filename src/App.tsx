@@ -39,6 +39,44 @@ export default function App() {
 
   const activeUID = currentUser?.uid || (guestMode ? "simulated_guru_uid" : "");
 
+  // Hydrate session from localStorage on start
+  useEffect(() => {
+    try {
+      const isGuestSaved = localStorage.getItem("guruai_guest_mode") === "true";
+      const cachedProfileRaw = localStorage.getItem("guruai_cached_profile");
+      if (isGuestSaved && cachedProfileRaw) {
+        const parsedProfile = JSON.parse(cachedProfileRaw);
+        setGuestMode(true);
+        setProfile(parsedProfile);
+        setActiveTab("forge");
+        fetchHistory(parsedProfile.uid);
+        fetchClassrooms(parsedProfile.uid);
+        setLoading(false);
+      } else if (!isGuestSaved && cachedProfileRaw) {
+        // Cache available for logged-in profile
+        const parsedProfile = JSON.parse(cachedProfileRaw);
+        setProfile(parsedProfile);
+        fetchHistory(parsedProfile.uid);
+        fetchClassrooms(parsedProfile.uid);
+      }
+    } catch (e) {
+      console.warn("Failed to restore session from localStorage:", e);
+    }
+  }, []);
+
+  // Whenever profile or guestMode states update, sync to localStorage to maintain access
+  useEffect(() => {
+    if (profile) {
+      localStorage.setItem("guruai_cached_profile", JSON.stringify(profile));
+    } else {
+      localStorage.removeItem("guruai_cached_profile");
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    localStorage.setItem("guruai_guest_mode", guestMode ? "true" : "false");
+  }, [guestMode]);
+
   // Start Auth Listeners
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -48,13 +86,14 @@ export default function App() {
         fetchProfile(user.uid);
       } else {
         setCurrentUser(null);
-        if (!guestMode) {
+        const savedGuestMode = localStorage.getItem("guruai_guest_mode");
+        if (savedGuestMode !== "true") {
           setLoading(false);
         }
       }
     });
     return () => unsubscribe();
-  }, [guestMode]);
+  }, []);
 
   // Fetch Teacher Profil
   const fetchProfile = async (uid: string) => {
@@ -198,6 +237,8 @@ export default function App() {
 
   const handleSignOutFlow = async () => {
     await logoutUser();
+    localStorage.removeItem("guruai_cached_profile");
+    localStorage.removeItem("guruai_guest_mode");
     setCurrentUser(null);
     setGuestMode(false);
     setProfile(null);

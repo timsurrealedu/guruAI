@@ -203,14 +203,18 @@ app.get("/api/profile/:uid", async (req, res) => {
   try {
     const db = getFirestoreDb();
     if (db) {
-      const doc = await db.collection("guru_profiles").doc(uid).get();
-      if (doc.exists) {
-        return res.json({ status: "success", profile: doc.data() });
+      try {
+        const doc = await db.collection("guru_profiles").doc(uid).get();
+        if (doc.exists) {
+          return res.json({ status: "success", profile: doc.data() });
+        }
+      } catch (err: any) {
+        console.warn("Firestore profile fetch failed, using memory fallback:", err.message);
       }
-    } else {
-      if (memoryDb.guru_profiles[uid]) {
-        return res.json({ status: "success", profile: memoryDb.guru_profiles[uid] });
-      }
+    }
+    
+    if (memoryDb.guru_profiles[uid]) {
+      return res.json({ status: "success", profile: memoryDb.guru_profiles[uid] });
     }
     // Return empty fallback
     return res.json({ status: "not_found", message: "Profil baru atau belum dibuat." });
@@ -227,10 +231,14 @@ app.post("/api/profile", async (req, res) => {
   try {
     const db = getFirestoreDb();
     if (db) {
-      await db.collection("guru_profiles").doc(profile.uid).set(profile);
-    } else {
-      memoryDb.guru_profiles[profile.uid] = profile;
+      try {
+        await db.collection("guru_profiles").doc(profile.uid).set(profile);
+      } catch (err: any) {
+        console.warn("Firestore profile save failed, using memory fallback:", err.message);
+      }
     }
+    // Always sync to memoryDb as backup
+    memoryDb.guru_profiles[profile.uid] = profile;
     return res.json({ status: "success", profile });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -243,18 +251,32 @@ app.get("/api/content/all/:guruId", async (req, res) => {
   try {
     const db = getFirestoreDb();
     if (db) {
-      const snapshot = await db.collection("konten_guru")
-        .where("guru_id", "==", guruId)
-        .orderBy("created_at", "desc")
-        .get();
-      const docs = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-      return res.json({ status: "success", contents: docs });
-    } else {
-      const filtered = memoryDb.konten_guru
-        .filter((c) => c.guru_id === guruId)
-        .sort((a, b) => b.created_at.localeCompare(a.created_at));
-      return res.json({ status: "success", contents: filtered });
+      try {
+        let docs = [];
+        try {
+          const snapshot = await db.collection("konten_guru")
+            .where("guru_id", "==", guruId)
+            .orderBy("created_at", "desc")
+            .get();
+          docs = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+        } catch (innerErr: any) {
+          console.warn("Compound index for 'konten_guru' query may be missing. Falling back to in-memory sort.", innerErr.message);
+          const snapshot = await db.collection("konten_guru")
+            .where("guru_id", "==", guruId)
+            .get();
+          docs = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+          docs.sort((a: any, b: any) => (b.created_at || "").localeCompare(a.created_at || ""));
+        }
+        return res.json({ status: "success", contents: docs });
+      } catch (dbErr: any) {
+        console.warn("Firestore fetch all contents failed, falling back to memory database:", dbErr.message);
+      }
     }
+    
+    const filtered = memoryDb.konten_guru
+      .filter((c) => c.guru_id === guruId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return res.json({ status: "success", contents: filtered });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -269,8 +291,13 @@ app.post("/api/content/generate", async (req, res) => {
     let profile: any = null;
     const db = getFirestoreDb();
     if (db) {
-      const doc = await db.collection("guru_profiles").doc(guruId).get();
-      if (doc.exists) profile = doc.data();
+      try {
+        const doc = await db.collection("guru_profiles").doc(guruId).get();
+        if (doc.exists) profile = doc.data();
+      } catch (err: any) {
+        console.warn("Firestore profile fetch during generate failed, using memory fallback:", err.message);
+        profile = memoryDb.guru_profiles[guruId] || null;
+      }
     } else {
       profile = memoryDb.guru_profiles[guruId] || null;
     }
@@ -379,10 +406,18 @@ _Silakan pasang GEMINI_API_KEY di Secrets Panel AI Studio untuk mengaktifkan AI 
       is_published: false
     };
 
+    let savedToFirestore = false;
     if (db) {
-      const savedDoc = await db.collection("konten_guru").add(newContent);
-      newContent.id = savedDoc.id;
-    } else {
+      try {
+        const savedDoc = await db.collection("konten_guru").add(newContent);
+        newContent.id = savedDoc.id;
+        savedToFirestore = true;
+      } catch (err: any) {
+        console.warn("Firestore contents save failed, using memory fallback:", err.message);
+      }
+    }
+    
+    if (!savedToFirestore) {
       newContent.id = "konten_" + Math.random().toString(36).substring(2, 11);
       memoryDb.konten_guru.push(newContent);
     }
@@ -400,13 +435,22 @@ app.post("/api/content/publish", async (req, res) => {
   try {
     let rawContent: any = null;
     const db = getFirestoreDb();
+    let isPublishedInFirestore = false;
+
     if (db) {
-      const doc = await db.collection("konten_guru").doc(contentId).get();
-      if (doc.exists) {
-        rawContent = doc.data();
-        await db.collection("konten_guru").doc(contentId).update({ is_published: true });
+      try {
+        const doc = await db.collection("konten_guru").doc(contentId).get();
+        if (doc.exists) {
+          rawContent = doc.data();
+          await db.collection("konten_guru").doc(contentId).update({ is_published: true });
+          isPublishedInFirestore = true;
+        }
+      } catch (err: any) {
+        console.warn("Firestore publish failed, falling back to memory database:", err.message);
       }
-    } else {
+    }
+
+    if (!isPublishedInFirestore) {
       const idx = memoryDb.konten_guru.findIndex((c) => c.id === contentId);
       if (idx !== -1) {
         memoryDb.konten_guru[idx].is_published = true;
@@ -433,9 +477,17 @@ app.post("/api/content/publish", async (req, res) => {
       created_at: new Date().toISOString()
     };
 
-    if (db) {
-      await db.collection("marketplace").add(mItem);
-    } else {
+    let addedToMarketplaceFirestore = false;
+    if (db && isPublishedInFirestore) {
+      try {
+        await db.collection("marketplace").add(mItem);
+        addedToMarketplaceFirestore = true;
+      } catch (err: any) {
+        console.warn("Firestore marketplace add failed, using memory fallback:", err.message);
+      }
+    }
+
+    if (!addedToMarketplaceFirestore) {
       const generatedId = "market_" + Math.random().toString(36).substring(2, 11);
       memoryDb.marketplace.push({ id: generatedId, ...mItem });
     }
@@ -451,19 +503,40 @@ app.get("/api/marketplace", async (req, res) => {
   try {
     const db = getFirestoreDb();
     if (db) {
-      let snapshot = await db.collection("marketplace").orderBy("created_at", "desc").get();
-      if (snapshot.empty) {
-        // Seed default marketplace items if empty
-        for (const item of memoryDb.marketplace) {
-          await db.collection("marketplace").doc(item.id).set(item);
+      try {
+        let snapshot;
+        try {
+          snapshot = await db.collection("marketplace").orderBy("created_at", "desc").get();
+        } catch (innerErr: any) {
+          console.warn("Marketplace created_at index may be missing. Querying without orderBy.", innerErr.message);
+          snapshot = await db.collection("marketplace").get();
         }
-        snapshot = await db.collection("marketplace").orderBy("created_at", "desc").get();
+
+        if (snapshot.empty) {
+          // Seed default marketplace items if empty
+          for (const item of memoryDb.marketplace) {
+            try {
+              await db.collection("marketplace").doc(item.id).set(item);
+            } catch (seedErr: any) {
+              console.warn("Marketplace seeding single item failed:", seedErr.message);
+            }
+          }
+          try {
+            snapshot = await db.collection("marketplace").orderBy("created_at", "desc").get();
+          } catch (innerErr: any) {
+            console.warn("Marketplace created_at index may be missing during seed check. Querying without orderBy.", innerErr.message);
+            snapshot = await db.collection("marketplace").get();
+          }
+        }
+        const items = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+        items.sort((a: any, b: any) => (b.created_at || "").localeCompare(a.created_at || ""));
+        return res.json({ status: "success", items });
+      } catch (dbErr: any) {
+        console.warn("Firestore marketplace retrieve failed, falling back to memory database:", dbErr.message);
       }
-      const items = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-      return res.json({ status: "success", items });
-    } else {
-      return res.json({ status: "success", items: memoryDb.marketplace });
     }
+    
+    return res.json({ status: "success", items: memoryDb.marketplace });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -478,11 +551,17 @@ app.post("/api/marketplace/remix", async (req, res) => {
     const db = getFirestoreDb();
 
     if (db) {
-      const docM = await db.collection("marketplace").doc(originalId).get();
-      if (docM.exists) originalItem = docM.data();
+      try {
+        const docM = await db.collection("marketplace").doc(originalId).get();
+        if (docM.exists) originalItem = docM.data();
 
-      const docP = await db.collection("guru_profiles").doc(guruId).get();
-      if (docP.exists) profile = docP.data();
+        const docP = await db.collection("guru_profiles").doc(guruId).get();
+        if (docP.exists) profile = docP.data();
+      } catch (err: any) {
+        console.warn("Firestore fetch during marketplace remix failed, using memory fallback:", err.message);
+        originalItem = memoryDb.marketplace.find((m) => m.id === originalId);
+        profile = memoryDb.guru_profiles[guruId];
+      }
     } else {
       originalItem = memoryDb.marketplace.find((m) => m.id === originalId);
       profile = memoryDb.guru_profiles[guruId];
@@ -524,12 +603,20 @@ Ganti contoh-contoh di atas agar relevan secara kontekstual dengan murid di wila
     }
 
     // Increments original counts
+    let updatedInFirestore = false;
     if (db) {
-      await db.collection("marketplace").doc(originalId).update({
-        remix_count: admin.firestore.FieldValue.increment(1),
-        downloads_count: admin.firestore.FieldValue.increment(1)
-      });
-    } else {
+      try {
+        await db.collection("marketplace").doc(originalId).update({
+          remix_count: admin.firestore.FieldValue.increment(1),
+          downloads_count: admin.firestore.FieldValue.increment(1)
+        });
+        updatedInFirestore = true;
+      } catch (err: any) {
+        console.warn("Firestore count increment failed, using memory fallback:", err.message);
+      }
+    }
+    
+    if (!updatedInFirestore) {
       const idx = memoryDb.marketplace.findIndex((m) => m.id === originalId);
       if (idx !== -1) {
         memoryDb.marketplace[idx].remix_count = (memoryDb.marketplace[idx].remix_count || 0) + 1;
@@ -550,10 +637,18 @@ Ganti contoh-contoh di atas agar relevan secara kontekstual dengan murid di wila
       is_published: false
     };
 
+    let savedRemixToFirestore = false;
     if (db) {
-      const savedDoc = await db.collection("konten_guru").add(newRemixedContent);
-      newRemixedContent.id = savedDoc.id;
-    } else {
+      try {
+        const savedDoc = await db.collection("konten_guru").add(newRemixedContent);
+        newRemixedContent.id = savedDoc.id;
+        savedRemixToFirestore = true;
+      } catch (err: any) {
+        console.warn("Firestore remixed content save failed, using memory fallback:", err.message);
+      }
+    }
+    
+    if (!savedRemixToFirestore) {
       newRemixedContent.id = "konten_" + Math.random().toString(36).substring(2, 11);
       memoryDb.konten_guru.push(newRemixedContent);
     }
@@ -570,27 +665,36 @@ app.get("/api/diagnostic/all/:guruId", async (req, res) => {
   try {
     const db = getFirestoreDb();
     if (db) {
-      const snapshot = await db.collection("kelas_data")
-        .where("guru_id", "==", guruId)
-        .get();
-      let docs = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-      
-      // Seed default demo class if empty so the user always has a classroom to interact with
-      if (docs.length === 0) {
-        const demoClass = {
-          ...memoryDb.kelas_data[0],
-          guru_id: guruId,
-          id: "class_demo_" + guruId,
-          kelas_id: "class_demo_" + guruId
-        };
-        await db.collection("kelas_data").doc(demoClass.id).set(demoClass);
-        docs = [demoClass];
+      try {
+        const snapshot = await db.collection("kelas_data")
+          .where("guru_id", "==", guruId)
+          .get();
+        let docs = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+        
+        // Seed default demo class if empty so the user always has a classroom to interact with
+        if (docs.length === 0) {
+          const demoClass = {
+            ...memoryDb.kelas_data[0],
+            guru_id: guruId,
+            id: "class_demo_" + guruId,
+            kelas_id: "class_demo_" + guruId
+          };
+          try {
+            await db.collection("kelas_data").doc(demoClass.id).set(demoClass);
+          } catch (seedErr: any) {
+            console.warn("Firestore seed class failed:", seedErr.message);
+          }
+          docs = [demoClass];
+        }
+        return res.json({ status: "success", classes: docs });
+      } catch (dbErr: any) {
+        console.warn("Firestore diagnostic classes fetch failed, falling back to memory:", dbErr.message);
       }
-      return res.json({ status: "success", classes: docs });
-    } else {
-      const filtered = memoryDb.kelas_data.filter((k) => k.guru_id === guruId || k.guru_id === "demo_user");
-      return res.json({ status: "success", classes: filtered });
     }
+    
+    // In-memory fallback
+    const filtered = memoryDb.kelas_data.filter((k) => k.guru_id === guruId || k.guru_id === "demo_user");
+    return res.json({ status: "success", classes: filtered });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -601,15 +705,22 @@ app.post("/api/diagnostic/save-class", async (req, res) => {
   const { classData } = req.body; // { id, guru_id, nama_kelas, daftar_siswa, nilai_history, ... }
   try {
     const db = getFirestoreDb();
+    let savedToFirestore = false;
     if (db) {
-      await db.collection("kelas_data").doc(classData.id).set(classData);
-    } else {
-      const idx = memoryDb.kelas_data.findIndex((c) => c.id === classData.id);
-      if (idx !== -1) {
-        memoryDb.kelas_data[idx] = classData;
-      } else {
-        memoryDb.kelas_data.push(classData);
+      try {
+        await db.collection("kelas_data").doc(classData.id).set(classData);
+        savedToFirestore = true;
+      } catch (dbErr: any) {
+        console.warn("Firestore save-class failed, falling back to in-memory:", dbErr.message);
       }
+    }
+    
+    // Always sync in memory as fallback/backup
+    const idx = memoryDb.kelas_data.findIndex((c) => c.id === classData.id);
+    if (idx !== -1) {
+      memoryDb.kelas_data[idx] = classData;
+    } else {
+      memoryDb.kelas_data.push(classData);
     }
     res.json({ status: "success", classData });
   } catch (error: any) {
@@ -626,11 +737,17 @@ app.post("/api/diagnostic/analyze", async (req, res) => {
     const db = getFirestoreDb();
 
     if (db) {
-      const docP = await db.collection("guru_profiles").doc(guruId).get();
-      if (docP.exists) profile = docP.data();
+      try {
+        const docP = await db.collection("guru_profiles").doc(guruId).get();
+        if (docP.exists) profile = docP.data();
 
-      const docC = await db.collection("kelas_data").doc(classId).get();
-      if (docC.exists) classroom = docC.data();
+        const docC = await db.collection("kelas_data").doc(classId).get();
+        if (docC.exists) classroom = docC.data();
+      } catch (dbErr: any) {
+        console.warn("Firestore diagnostic retrieval during analyze failed, falling back to in-memory:", dbErr.message);
+        profile = memoryDb.guru_profiles[guruId];
+        classroom = memoryDb.kelas_data.find((c) => c.id === classId);
+      }
     } else {
       profile = memoryDb.guru_profiles[guruId];
       classroom = memoryDb.kelas_data.find((c) => c.id === classId);
@@ -703,9 +820,17 @@ Gunakan data nama siswa dengan inisial atau nama panggilan pertama dari daftar s
     reports.push(newReport);
     classroom.laporan_diagnostik = reports;
 
+    let savedReportToFirestore = false;
     if (db) {
-      await db.collection("kelas_data").doc(classId).set(classroom);
-    } else {
+      try {
+        await db.collection("kelas_data").doc(classId).set(classroom);
+        savedReportToFirestore = true;
+      } catch (err: any) {
+        console.warn("Firestore save report failed, using memory fallback:", err.message);
+      }
+    }
+    
+    if (!savedReportToFirestore) {
       const idx = memoryDb.kelas_data.findIndex((c) => c.id === classId);
       if (idx !== -1) memoryDb.kelas_data[idx] = classroom;
     }
@@ -723,8 +848,13 @@ app.post("/api/diagnostic/vision", async (req, res) => {
     let profile: any = null;
     const db = getFirestoreDb();
     if (db) {
-      const doc = await db.collection("guru_profiles").doc(guruId).get();
-      if (doc.exists) profile = doc.data();
+      try {
+        const doc = await db.collection("guru_profiles").doc(guruId).get();
+        if (doc.exists) profile = doc.data();
+      } catch (err: any) {
+        console.warn("Firestore profile fetch during vision failed, using memory fallback:", err.message);
+        profile = memoryDb.guru_profiles[guruId];
+      }
     } else {
       profile = memoryDb.guru_profiles[guruId];
     }
