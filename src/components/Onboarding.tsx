@@ -90,7 +90,7 @@ export default function Onboarding({ initialProfile, onSave, uid }: OnboardingPr
             <Sparkles className="w-6 h-6 animate-none" />
           </div>
           <div>
-            <h2 className="text-2xl font-serif italic font-medium tracking-tight">DNA Mengajar Bapak/Ibu Guru</h2>
+            <h2 className="text-2xl font-sans font-extrabold tracking-tight">DNA Mengajar Bapak/Ibu Guru</h2>
             <p className="text-indigo-100 text-xs font-mono mt-1 uppercase tracking-wider">Konfigurasikan preferensi pedagogis Anda agar semua materi disesuaikan secara otomatis.</p>
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function Onboarding({ initialProfile, onSave, uid }: OnboardingPr
       <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-8">
         {/* IDENTITAS GRU */}
         <div className="space-y-4">
-          <h3 className="text-base font-serif italic text-slate-950 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
+          <h3 className="text-base font-sans font-bold text-slate-900 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
             <User className="w-5 h-5 text-indigo-600" /> Profil Pribadi Belajar
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -192,7 +192,7 @@ export default function Onboarding({ initialProfile, onSave, uid }: OnboardingPr
 
         {/* GAYA MENGAJAR */}
         <div className="space-y-4">
-          <h3 className="text-base font-serif italic text-slate-950 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
+          <h3 className="text-base font-sans font-bold text-slate-900 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
             <Lightbulb className="w-5 h-5 text-indigo-600" /> Metode &amp; Karakter Kelas
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -250,7 +250,7 @@ export default function Onboarding({ initialProfile, onSave, uid }: OnboardingPr
 
         {/* KEARIFAN LOKAL & PERANGKAT SOAL */}
         <div className="space-y-4">
-          <h3 className="text-base font-serif italic text-slate-950 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
+          <h3 className="text-base font-sans font-bold text-slate-900 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
             <MapPin className="w-5 h-5 text-indigo-600" /> Preferensi Konten &amp; Kearifan Lokal
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

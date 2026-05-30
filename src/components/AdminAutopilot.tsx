@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { ProfilGuru } from "../types";
 import { FileText, Sparkles, Clipboard, Check, Printer } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface AdminAutopilotProps {
   profile: ProfilGuru;
@@ -64,7 +66,7 @@ export default function AdminAutopilot({ profile }: AdminAutopilotProps) {
       
       {/* INPUT COLS */}
       <div className="lg:col-span-5 bg-white p-5 rounded-none border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] space-y-4">
-        <h3 className="text-base font-serif italic text-slate-950 font-bold flex items-center gap-2 border-b-2 border-slate-200 pb-2">
+        <h3 className="text-base font-sans font-bold text-slate-900 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
           <FileText className="w-5 h-5 text-indigo-600" /> Admin Autopilot
         </h3>
         <p className="text-slate-500 font-mono text-xs leading-relaxed uppercase tracking-wider">
@@ -151,8 +153,38 @@ export default function AdminAutopilot({ profile }: AdminAutopilotProps) {
               </div>
             </div>
             
-            <div className="flex-1 p-6 text-xs font-mono text-slate-800 leading-relaxed whitespace-pre bg-slate-50/55 overflow-x-auto max-h-[450px]">
-              {resultText}
+            <div className="flex-1 p-6 text-xs font-mono text-slate-800 leading-relaxed bg-slate-50/55 overflow-x-auto max-h-[450px] space-y-3">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({ children }) => <h1 className="text-sm font-bold border-b border-slate-350 pb-1 mt-4 mb-2 uppercase tracking-wide text-slate-950 font-mono">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-xs font-bold mt-3 mb-1.5 uppercase text-slate-900 font-mono">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-850 font-mono">{children}</h3>,
+                  p: ({ children }) => <p className="leading-relaxed mb-2 font-mono whitespace-pre-wrap">{children}</p>,
+                  ul: ({ children }) => <ul className="list-disc pl-5 mb-2.5 space-y-1 font-mono">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal pl-5 mb-2.5 space-y-1 font-mono">{children}</ol>,
+                  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-2 border-slate-400 pl-3 py-1 my-3 italic text-slate-600 bg-slate-100/50">
+                      {children}
+                    </blockquote>
+                  ),
+                  table: ({ children }) => (
+                    <div className="overflow-x-auto my-4 border border-slate-400">
+                      <table className="min-w-full divide-y divide-slate-400 text-xs bg-white font-mono">
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  thead: ({ children }) => <thead className="bg-slate-200 text-slate-900 font-bold border-b border-slate-400">{children}</thead>,
+                  tbody: ({ children }) => <tbody className="divide-y divide-slate-300 bg-white">{children}</tbody>,
+                  tr: ({ children }) => <tr>{children}</tr>,
+                  th: ({ children }) => <th className="px-3 py-2 text-left font-bold border-r border-slate-300 last:border-r-0">{children}</th>,
+                  td: ({ children }) => <td className="px-3 py-2 border-r border-slate-300 last:border-r-0 leading-relaxed">{children}</td>,
+                }}
+              >
+                {resultText}
+              </ReactMarkdown>
             </div>
           </div>
         ) : (

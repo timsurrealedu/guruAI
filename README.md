@@ -51,6 +51,7 @@ Platform ini dibangun menggunakan arsitektur modern **Full-Stack (Client-Server)
 - **Build Tool**: Vite 6.
 - **Styling**: Tailwind CSS v4 (Desain estetis bernuansa akademis profesional, bersih, dan kontras tinggi untuk kenyamanan mata saat lembur).
 - **Animasi**: `motion` (Framer Motion) untuk transisi antar halaman yang halus dan responsif.
+- **Render Markdown & Matematika**: `react-markdown` yang ditingkatkan dengan plugin `remark-gfm` (tabel/formatting), `remark-math` & `rehype-katex` lengkap dengan pustaka CSS `katex` untuk rendering render simbol matematika/eksponen/persamaan aljabar yang sempurna tanpa merusak pemformatan visual.
 - **Icons**: `lucide-react`.
 
 ---

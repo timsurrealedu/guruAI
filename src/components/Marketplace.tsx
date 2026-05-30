@@ -170,7 +170,7 @@ export default function Marketplace({ profile, onRefreshHistory, onSetTab }: Mar
                   </div>
                 </div>
 
-                <h4 className="font-serif italic font-bold text-slate-950 text-base leading-snug">{item.judul}</h4>
+                <h4 className="font-sans font-bold text-slate-900 text-base leading-snug">{item.judul}</h4>
                 
                 <p className="text-[10px] font-mono text-slate-600 uppercase">
                   Kontributor: <strong className="text-slate-900">{item.original_guru_nama}</strong> ({item.original_sekolah}, {item.original_kota})

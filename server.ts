@@ -114,6 +114,62 @@ Sebuah truk bermassa 2000 kg bergerak dengan percepatan 2 m/s². Hitunglah gaya 
   ] as any[]
 };
 
+let isTestingConnection = false;
+async function testAndInitializeFirestore() {
+  if (isTestingConnection) return;
+  isTestingConnection = true;
+  
+  if (!firebaseProjectID) {
+    console.info("No Firebase project configurations found. Working in self-healing memory-backup mode.");
+    firestoreDb = false;
+    return;
+  }
+
+  let app;
+  try {
+    if (!admin.apps.length) {
+      app = admin.initializeApp({
+        projectId: firebaseProjectID
+      });
+    } else {
+      app = admin.apps[0];
+    }
+  } catch (err: any) {
+    console.error("Firebase Admin initialization failed:", err.message);
+    firestoreDb = false;
+    return;
+  }
+
+  // Check if we can write/read custom database
+  if (firebaseDBId) {
+    try {
+      console.log(`Checking connection to custom database: ${firebaseDBId}...`);
+      const customDb = getAdminFirestore(app, firebaseDBId);
+      // Try a simple limit-get query to ensure API is open and IAM allows access
+      await customDb.collection("guru_profiles").limit(1).get();
+      console.log(`Successfully connected to custom database: ${firebaseDBId}`);
+      firestoreDb = customDb;
+      return;
+    } catch (err: any) {
+      console.warn(`Failed to connect to custom database ${firebaseDBId} (${err.message}). Trying default database...`);
+    }
+  }
+
+  // Try the default database
+  try {
+    console.log("Checking connection to (default) database...");
+    const defaultDb = getAdminFirestore(app);
+    await defaultDb.collection("guru_profiles").limit(1).get();
+    console.log("Successfully connected to (default) database");
+    firestoreDb = defaultDb;
+    return;
+  } catch (err: any) {
+    console.warn(`Failed to connect to (default) database (${err.message}). Falling back to memory database mode.`);
+  }
+
+  firestoreDb = false; // RAM fallback
+}
+
 function getFirestoreDb() {
   if (firestoreDb === null) {
     if (firebaseProjectID) {
@@ -126,19 +182,15 @@ function getFirestoreDb() {
         } else {
           app = admin.apps[0];
         }
-        // Access custom DB instance if returned in config
         if (firebaseDBId) {
           firestoreDb = getAdminFirestore(app, firebaseDBId);
         } else {
           firestoreDb = getAdminFirestore(app);
         }
-        console.log("Firebase Admin successfully connected on server.");
       } catch (err) {
-        console.error("Firebase connection initialization failed, using mock fallback mode:", err);
-        firestoreDb = false; // flag to use RAM storage
+        firestoreDb = false;
       }
     } else {
-      console.info("No Firebase project configurations found. Working in self-healing memory-backup mode.");
       firestoreDb = false;
     }
   }
@@ -919,6 +971,9 @@ Gunakan sapaan hangat "Bapak/Ibu" dalam menyampaikan draf koreksi visual ini!`;
 
 // FRONTEND STATIC FILES INTEGRATION WITH VITE MIDDLEWARE
 async function startServer() {
+  // Pre-test and cache the working Firestore instance
+  await testAndInitializeFirestore();
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },

@@ -169,7 +169,7 @@ export default function DiagnosticTool({ profile, classroomList, onSaveClassroom
             <Users className="w-6 h-6 animate-none" />
           </div>
           <div>
-            <h2 className="text-xl font-serif italic font-medium text-slate-950 mb-0.5">Detektif Kesulitan (Analisis Diagnostik Kelas)</h2>
+            <h2 className="text-xl font-sans font-bold text-slate-900 mb-0.5">Detektif Kesulitan (Analisis Diagnostik Kelas)</h2>
             <p className="text-slate-500 font-mono text-[11px] uppercase tracking-wider">Kelompokkan remedial kustom siswa dan jalankan OCR lembar jawaban cetak.</p>
           </div>
         </div>
@@ -252,7 +252,7 @@ export default function DiagnosticTool({ profile, classroomList, onSaveClassroom
                   <span className="block text-[10px] uppercase font-bold font-mono text-slate-400 mb-1">Nilai Siswa (Skala 0-100):</span>
                   {activeClass.daftar_siswa.map((student) => (
                     <div key={student} className="flex items-center justify-between text-xs py-1 border-b border-dashed border-slate-100">
-                      <span className="text-slate-750 font-bold font-serif italic select-none truncate max-w-[120px]">{student}</span>
+                      <span className="text-slate-700 font-bold font-sans select-none truncate max-w-[120px]">{student}</span>
                       <input
                         type="number"
                         min="0"
@@ -286,7 +286,7 @@ export default function DiagnosticTool({ profile, classroomList, onSaveClassroom
           {/* STATS HISTORY & ANALYZE ACTION */}
           <div className="bg-white p-5 rounded-none border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] space-y-4">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider font-mono flex flex-wrap items-center justify-between border-b-2 border-slate-200 pb-2.5">
-              <span className="font-serif italic font-bold text-base text-slate-950">Evaluasi Diagnostik: {activeClass?.nama_kelas}</span>
+              <span className="font-sans font-bold text-base text-slate-950">Evaluasi Diagnostik: {activeClass?.nama_kelas}</span>
               <span className="text-xs text-indigo-600 font-bold font-mono">KKM TUNTAS &ge; 75</span>
             </h3>
 
@@ -299,7 +299,7 @@ export default function DiagnosticTool({ profile, classroomList, onSaveClassroom
                 {activeClass.nilai_history.map((exam, examIdx) => (
                   <div key={examIdx} className="border-2 border-slate-900 rounded-none p-4 bg-slate-50/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h4 className="font-bold text-slate-850 text-sm font-serif italic">{exam.topik}</h4>
+                      <h4 className="font-bold text-slate-900 text-sm font-sans">{exam.topik}</h4>
                       <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase tracking-wider">Tanggal: {exam.tanggal} &bull; Total: {activeClass.daftar_siswa.length} Murid</p>
                       
                       {/* Mini grade values badge preview */}

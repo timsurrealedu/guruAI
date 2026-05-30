@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { ProfilGuru } from "../types";
 import { BookOpen, Sparkles, Clipboard, Check, Printer } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 
 interface RaporCopilotProps {
   profile: ProfilGuru;
@@ -71,7 +76,7 @@ export default function RaporCopilot({ profile }: RaporCopilotProps) {
       
       {/* INPUT FORM */}
       <div className="lg:col-span-5 bg-white p-5 rounded-none border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] space-y-4">
-        <h3 className="text-base font-serif italic text-slate-950 font-bold flex items-center gap-2 border-b-2 border-slate-200 pb-2">
+        <h3 className="text-base font-sans font-bold text-slate-900 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
           <BookOpen className="w-5 h-5 text-indigo-600" /> Co-Pilot Rapor Naratif
         </h3>
         <p className="text-slate-500 font-mono text-xs leading-relaxed uppercase tracking-wider">
@@ -189,8 +194,27 @@ export default function RaporCopilot({ profile }: RaporCopilotProps) {
               </div>
             </div>
             
-            <div className="flex-1 p-6 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap font-sans">
-              {resultText}
+            <div className="flex-1 p-6 text-sm text-slate-800 leading-relaxed font-sans space-y-4">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                components={{
+                  h1: ({ children }) => <h1 className="text-lg md:text-xl font-sans font-bold text-slate-950 border-b-2 border-slate-200 pb-2 mt-4 mb-3">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-base md:text-lg font-sans font-bold text-slate-950 mt-4 mb-2">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-sm md:text-base font-sans font-bold text-slate-900 mt-3 mb-2">{children}</h3>,
+                  p: ({ children }) => <p className="text-slate-800 leading-relaxed mb-3.5 text-xs md:text-sm font-sans">{children}</p>,
+                  ul: ({ children }) => <ul className="list-disc pl-5 mb-3.5 space-y-1.5 text-slate-850 text-xs md:text-sm font-sans">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal pl-5 mb-3.5 space-y-1.5 text-slate-850 text-xs md:text-sm font-sans">{children}</ol>,
+                  li: ({ children }) => <li className="text-slate-800 leading-relaxed">{children}</li>,
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-indigo-600 bg-slate-50 pl-3.5 py-2 pr-2 my-4 text-slate-705 text-xs md:text-sm leading-relaxed">
+                      {children}
+                    </blockquote>
+                  ),
+                }}
+              >
+                {resultText}
+              </ReactMarkdown>
             </div>
           </div>
         ) : (

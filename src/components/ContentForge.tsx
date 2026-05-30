@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { ProfilGuru, KontenGuru } from "../types";
 import { Sparkles, FileText, Download, Check, Clipboard, Bookmark, History, Globe2, AlertCircle } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 
 interface ContentForgeProps {
   profile: ProfilGuru;
@@ -297,7 +302,7 @@ export default function ContentForge({ profile, onRefreshHistory, historyList }:
               <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-600 rounded-none animate-spin"></div>
               <Sparkles className="w-5 h-5 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             </div>
-            <h4 className="text-base font-serif italic font-medium text-slate-900">Menyampul Modul Pedagogis Terbaik...</h4>
+            <h4 className="text-base font-sans font-bold text-slate-900">Menyampul Modul Pedagogis Terbaik...</h4>
             <p className="text-slate-500 text-xs font-mono max-w-sm mt-3 leading-relaxed">
               GuruAI sedang membaca profil DNA mengajar Bapak/Ibu, merancang indikator Taksonomi Bloom, mengecek kearifan lokal, dan menyusun teks ajar.
             </p>
@@ -367,8 +372,48 @@ export default function ContentForge({ profile, onRefreshHistory, historyList }:
               </div>
               
               {/* Render Markdown blocks */}
-              <div className="space-y-4 whitespace-pre-wrap font-sans leading-relaxed">
-                {generatedContent.konten}
+              <div className="space-y-4 font-sans leading-relaxed text-slate-900">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                  components={{
+                    h1: ({ children }) => <h1 className="text-xl md:text-2xl font-sans font-bold text-slate-950 border-b-2 border-slate-200 pb-2.5 mt-6 mb-4">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-lg md:text-xl font-sans font-bold text-slate-950 mt-5 mb-3">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-base md:text-lg font-sans font-bold text-slate-900 mt-4 mb-2.5">{children}</h3>,
+                    p: ({ children }) => <p className="text-slate-800 leading-relaxed mb-4 text-sm font-sans">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-2 text-slate-800 text-sm font-sans">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 space-y-2 text-slate-800 text-sm font-sans">{children}</ol>,
+                    li: ({ children }) => <li className="text-slate-800 leading-relaxed">{children}</li>,
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-4 border-indigo-600 bg-slate-50 pl-4 py-2.5 pr-2.5 my-5 text-slate-700 text-xs md:text-sm leading-relaxed">
+                        {children}
+                      </blockquote>
+                    ),
+                    table: ({ children }) => (
+                      <div className="overflow-x-auto my-6 border-2 border-slate-900 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
+                        <table className="min-w-full divide-y-2 divide-slate-900 text-xs md:text-sm bg-white font-sans">
+                          {children}
+                        </table>
+                      </div>
+                    ),
+                    thead: ({ children }) => <thead className="bg-[#f8fafc] text-slate-950 font-bold border-b-2 border-slate-900">{children}</thead>,
+                    tbody: ({ children }) => <tbody className="divide-y divide-slate-200 bg-white">{children}</tbody>,
+                    tr: ({ children }) => <tr className="hover:bg-slate-50/70 transition-colors">{children}</tr>,
+                    th: ({ children }) => <th className="px-4 py-3 text-left font-bold border-r-2 border-slate-900 last:border-r-0 select-none uppercase tracking-wider text-[10px] sm:text-xs">{children}</th>,
+                    td: ({ children }) => <td className="px-4 py-3 border-r border-slate-205 last:border-r-0 text-slate-850 leading-relaxed">{children}</td>,
+                    code: ({ node, className, children, ...props }) => {
+                      const match = /language-(\w+)/.exec(className || "");
+                      return (
+                        <code className="bg-slate-100 text-indigo-700 px-1.5 py-0.5 font-mono text-xs rounded font-semibold border border-slate-200" {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                    pre: ({ children }) => <pre className="bg-slate-905 text-slate-100 p-4 rounded-none font-mono text-xs overflow-x-auto shadow-inner my-5 whitespace-pre-wrap leading-relaxed border-2 border-slate-900">{children}</pre>,
+                  }}
+                >
+                  {generatedContent.konten}
+                </ReactMarkdown>
               </div>
             </div>
           </div>

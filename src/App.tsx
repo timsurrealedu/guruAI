@@ -259,7 +259,7 @@ export default function App() {
           </div>
           
           <div>
-            <h1 className="text-3xl font-serif italic text-slate-900 tracking-tight">Guru<span className="text-indigo-600 font-sans font-extrabold not-italic">AI</span></h1>
+            <h1 className="text-3xl font-logo italic text-slate-900 tracking-tight">Guru<span className="text-indigo-600 font-sans font-extrabold not-italic">AI</span></h1>
             <p className="text-slate-500 text-xs font-mono tracking-wider uppercase mt-1">Co-Pilot Pedagogis Guru Indonesia</p>
           </div>
 
@@ -306,7 +306,7 @@ export default function App() {
             <div className="px-1.5 py-1.5 bg-indigo-600 text-white border-2 border-slate-900 shadow-[1.5px_1.5px_0px_0px_#0f172a] rounded-none">
               <Sparkles className="w-5 h-5" />
             </div>
-            <h1 className="text-xl font-serif italic text-slate-900 tracking-tight">Guru<span className="text-indigo-600 font-sans font-extrabold not-italic">AI</span></h1>
+            <h1 className="text-xl font-logo italic text-slate-900 tracking-tight">Guru<span className="text-indigo-600 font-sans font-extrabold not-italic">AI</span></h1>
           </div>
 
           {/* QUICK SUMMARY OF THE ACTIVE TEACHER DNA */}
@@ -475,7 +475,7 @@ export default function App() {
                 <Settings className="w-8 h-8 text-indigo-600" />
               </div>
               <h3 className="text-base font-bold font-mono uppercase tracking-wider text-slate-900">DNA Profil Guru Belum Aktif</h3>
-              <p className="text-slate-500 font-serif italic text-xs max-w-md mx-auto leading-relaxed">
+              <p className="text-slate-600 text-xs max-w-md mx-auto leading-relaxed">
                 Bapak/Ibu perlu melengkapi identitas mengajar (DNA Profil) terlebih dahulu di tab <strong>"DNA PROFIL SAYA"</strong> agar kecerdasan buatan GuruAI dapat menyelaraskan modul, menganalisis penilaian, dan merancang laporan sesuai dengan data kustom Anda.
               </p>
               <button
