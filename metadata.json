@@ -1,0 +1,6 @@
+{
+  "name": "GuruAI",
+  "description": "Co-pilot pedagogis cerdas untuk guru dan tenaga pendidik Indonesia. Memiliki pengetahuan mendalam tentang Kurikulum Merdeka, RPP, dan diagnosa sebaran Bloom kognitif.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
